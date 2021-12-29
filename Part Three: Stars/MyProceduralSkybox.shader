@@ -19,6 +19,9 @@
         _StarTex("Star Tex", 2D) = "black" {}
         _StarBending("Star Bending", Range(0, 1)) = 1
         _StarBrightness("Star Brightness", Range(0, 100)) = 8.5
+        _TwinkleTex ("Twinkle Noise Tex", 2D) = "black" {}
+        _TwinkleBoost("Twinkle Boost", Range(0, 1)) = .25
+        _TwinkleSpeed("Twinkle Speed", Range(0, 1)) = .1
     }
     SubShader
     {
@@ -46,9 +49,10 @@
             uniform half _NightStartHeight, _NightEndHeight;
             uniform half _SkyFadeStart, _SkyFadeEnd;
 
-            uniform sampler2D _StarTex;
-            uniform float4 _StarTex_ST;
+            uniform sampler2D _StarTex, _TwinkleTex;
+            uniform float4 _StarTex_ST, _TwinkleTex_ST;
             uniform float _StarBending, _StarBrightness;
+            uniform float _TwinkleBoost, _TwinkleSpeed;
 
             struct appdata
             {
@@ -305,6 +309,15 @@
                 stars = 1 - stars;
                 //and then raise the value to a power to adjust the brightness falloff of the stars
                 stars = pow(stars, _StarBrightness);
+                
+                //we also sample a basic noise texture, this allows us to modulate the star brightness, this creates a twinkle effect
+                float twinkle = tex2D(_TwinkleTex, (starsUV * _TwinkleTex_ST.xy) + _TwinkleTex_ST.zw + float2(1, 0) * _Time.y * _TwinkleSpeed).r;
+                //modulate the twinkle value
+                twinkle *= _TwinkleBoost;
+                
+                //then adjust the final color
+                stars -= twinkle;
+                stars = saturate(stars);
 
                 //then lerp to the stars color masking out the horizon
                 col.rgb = lerp(col.rgb, col.rgb + stars, night * horizonValue);
